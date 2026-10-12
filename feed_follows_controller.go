@@ -30,8 +30,17 @@ func (apiCfg *apiConfig) createFeedFollowHandler(w http.ResponseWriter, r *http.
 		FeedID:    params.FeedID,
 	})
 	if err != nil {
-		responsdWithError(w, 400, fmt.Sprint("Couldn't create feed:", err))
+		responsdWithError(w, 400, fmt.Sprint("Couldn't create feed follow:", err))
 		return
 	}
 	respondWithJSON(w, 201, databaseFeedFollowToFeedFollow(feedFollow))
+}
+
+func (apiCfg *apiConfig) getFeedFollowsHandler(w http.ResponseWriter, r *http.Request, user database.User) {
+	feedFollows, err := apiCfg.DB.GetFeedFollows(r.Context(), user.ID)
+	if err != nil {
+		responsdWithError(w, 400, fmt.Sprint("Couldn't get feed follows:", err))
+		return
+	}
+	respondWithJSON(w, 201, databaseFeedFollowsToFeedFollows(feedFollows))
 }
