@@ -38,6 +38,11 @@ func (apiCfg *apiConfig) createFeedHandler(w http.ResponseWriter, r *http.Reques
 	respondWithJSON(w, 201, databaseFeedToFeed(feed))
 }
 
-func (apiCfg *apiConfig) getFeedHandler(w http.ResponseWriter, r *http.Request, feed database.Feed) {
-	respondWithJSON(w, 200, databaseFeedToFeed(feed))
+func (apiCfg *apiConfig) getFeedsHandler(w http.ResponseWriter, r *http.Request) {
+	feeds, err := apiCfg.DB.GetFeeds(r.Context())
+	if err != nil {
+		responsdWithError(w, 400, fmt.Sprintf("Couldn't get feeds: %v", err))
+		return
+	}
+	respondWithJSON(w, 200, databaseFeedsToFeed(feeds))
 }
