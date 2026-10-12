@@ -64,6 +64,8 @@ func main() {
 	v1Router.Post("/feeds", apiCfg.middlewareAuth(apiCfg.createFeedHandler))
 	v1Router.Get("/feeds", apiCfg.getFeedsHandler)
 
+	v1Router.Post("/feed_follows", apiCfg.middlewareAuth(apiCfg.createFeedFollowHandler))
+
 	app := &http.Server{
 		Handler: router,
 		Addr:    ":" + PORT,
