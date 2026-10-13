@@ -1,5 +1,5 @@
 -- +goose Up
-ALTER TABLE users ADD COLUMN last_fetched_at TIMESTAMP;
+ALTER TABLE feeds ADD COLUMN last_fetched_at TIMESTAMP;
 
 -- +goose Down
-ALTER TABLE users DROP COLUMN last_fetched_at;
+ALTER TABLE feeds DROP COLUMN last_fetched_at;
