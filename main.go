@@ -62,6 +62,7 @@ func main() {
 	router := chi.NewRouter()
 	v1Router := chi.NewRouter()
 
+	router.Use(loggingMiddleware)
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
