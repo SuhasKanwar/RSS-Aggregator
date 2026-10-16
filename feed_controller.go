@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/SuhasKanwar/RSS-Aggregator/internal/database"
@@ -20,7 +21,16 @@ func (apiCfg *apiConfig) createFeedHandler(w http.ResponseWriter, r *http.Reques
 	params := parameters{}
 	err := decoder.Decode(&params)
 	if err != nil {
-		responsdWithError(w, 400, fmt.Sprint("Error parsing JSON:", err))
+		respondWithError(w, 400, fmt.Sprint("Error parsing JSON:", err))
+		return
+	}
+	if params.Name == "" {
+		respondWithError(w, 400, "name is required")
+		return
+	}
+	if _, urlErr := url.ParseRequestURI(params.URL); params.URL == "" || urlErr != nil {
+		respondWithError(w, 400, "a valid url is required")
+		return
 	}
 
 	feed, err := apiCfg.DB.CreateFeed(r.Context(), database.CreateFeedParams{
@@ -32,7 +42,7 @@ func (apiCfg *apiConfig) createFeedHandler(w http.ResponseWriter, r *http.Reques
 		UserID:    user.ID,
 	})
 	if err != nil {
-		responsdWithError(w, 400, fmt.Sprint("Couldn't create feed:", err))
+		respondWithError(w, 400, fmt.Sprint("Couldn't create feed:", err))
 		return
 	}
 	respondWithJSON(w, 201, databaseFeedToFeed(feed))
@@ -41,7 +51,7 @@ func (apiCfg *apiConfig) createFeedHandler(w http.ResponseWriter, r *http.Reques
 func (apiCfg *apiConfig) getFeedsHandler(w http.ResponseWriter, r *http.Request) {
 	feeds, err := apiCfg.DB.GetFeeds(r.Context())
 	if err != nil {
-		responsdWithError(w, 400, fmt.Sprintf("Couldn't get feeds: %v", err))
+		respondWithError(w, 400, fmt.Sprintf("Couldn't get feeds: %v", err))
 		return
 	}
 	respondWithJSON(w, 200, databaseFeedsToFeed(feeds))

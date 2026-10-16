@@ -20,7 +20,12 @@ func (apiCfg *apiConfig) createFeedFollowHandler(w http.ResponseWriter, r *http.
 	params := parameters{}
 	err := decoder.Decode(&params)
 	if err != nil {
-		responsdWithError(w, 400, fmt.Sprint("Error parsing JSON:", err))
+		respondWithError(w, 400, fmt.Sprint("Error parsing JSON:", err))
+		return
+	}
+	if params.FeedID == (uuid.UUID{}) {
+		respondWithError(w, 400, "feed_id is required")
+		return
 	}
 
 	feedFollow, err := apiCfg.DB.CreateFeedFollow(r.Context(), database.CreateFeedFollowParams{
@@ -31,7 +36,7 @@ func (apiCfg *apiConfig) createFeedFollowHandler(w http.ResponseWriter, r *http.
 		FeedID:    params.FeedID,
 	})
 	if err != nil {
-		responsdWithError(w, 400, fmt.Sprint("Couldn't create feed follow:", err))
+		respondWithError(w, 400, fmt.Sprint("Couldn't create feed follow:", err))
 		return
 	}
 	respondWithJSON(w, 201, databaseFeedFollowToFeedFollow(feedFollow))
@@ -40,17 +45,17 @@ func (apiCfg *apiConfig) createFeedFollowHandler(w http.ResponseWriter, r *http.
 func (apiCfg *apiConfig) getFeedFollowsHandler(w http.ResponseWriter, r *http.Request, user database.User) {
 	feedFollows, err := apiCfg.DB.GetFeedFollows(r.Context(), user.ID)
 	if err != nil {
-		responsdWithError(w, 400, fmt.Sprint("Couldn't get feed follows:", err))
+		respondWithError(w, 400, fmt.Sprint("Couldn't get feed follows:", err))
 		return
 	}
-	respondWithJSON(w, 201, databaseFeedFollowsToFeedFollows(feedFollows))
+	respondWithJSON(w, 200, databaseFeedFollowsToFeedFollows(feedFollows))
 }
 
 func (apiCfg *apiConfig) deleteFeedFollowHandler(w http.ResponseWriter, r *http.Request, user database.User) {
 	feedFollowIDStr := chi.URLParam(r, "feedFollowID")
 	feedFollowID, err := uuid.Parse(feedFollowIDStr)
 	if err != nil {
-		responsdWithError(w, 400, fmt.Sprintf("Couldn't parse feed follow id: %v", err))
+		respondWithError(w, 400, fmt.Sprintf("Couldn't parse feed follow id: %v", err))
 		return
 	}
 
@@ -60,7 +65,7 @@ func (apiCfg *apiConfig) deleteFeedFollowHandler(w http.ResponseWriter, r *http.
 	})
 
 	if err != nil {
-		responsdWithError(w, 400, fmt.Sprintf("Couldn't delete feed follow: %v", err))
+		respondWithError(w, 400, fmt.Sprintf("Couldn't delete feed follow: %v", err))
 		return
 	}
 	respondWithJSON(w, 200, struct{}{})

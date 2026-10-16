@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -15,14 +16,15 @@ import (
 func scrape(db *database.Queries, wg *sync.WaitGroup, feed database.Feed) {
 	defer wg.Done()
 
-	_, err := db.MarkFeedAsFetched(context.Background(), feed.ID)
-	if err != nil {
-		log.Println("error marking feed as fetched:", err)
-		return
-	}
 	rssFeed, err := urlToFeed(feed.Url)
 	if err != nil {
 		log.Println("error fetching feed:", err)
+		return
+	}
+
+	_, err = db.MarkFeedAsFetched(context.Background(), feed.ID)
+	if err != nil {
+		log.Println("error marking feed as fetched:", err)
 		return
 	}
 
@@ -32,7 +34,7 @@ func scrape(db *database.Queries, wg *sync.WaitGroup, feed database.Feed) {
 			description.String = item.Description
 			description.Valid = true
 		}
-		pubAt, err := time.Parse(time.RFC1123Z, item.PubDate)
+		pubAt, err := parsePubDate(item.PubDate)
 		if err != nil {
 			log.Printf("couldn't parse date %v with err %v", item.PubDate, err)
 			continue
@@ -44,6 +46,7 @@ func scrape(db *database.Queries, wg *sync.WaitGroup, feed database.Feed) {
 			Title:       item.Title,
 			Description: description,
 			PublishedAt: pubAt,
+			Url:         item.Link,
 			FeedID:      feed.ID,
 		})
 		if err != nil {
@@ -54,6 +57,27 @@ func scrape(db *database.Queries, wg *sync.WaitGroup, feed database.Feed) {
 		}
 	}
 	log.Printf("Feed %s collected, %v posts found", feed.Name, len(rssFeed.Channel.Item))
+}
+
+// parsePubDate tries multiple common RSS date formats in order.
+func parsePubDate(s string) (time.Time, error) {
+	formats := []string{
+		time.RFC1123Z,
+		time.RFC1123,
+		time.RFC822Z,
+		time.RFC822,
+		time.RFC3339,
+		"2006-01-02T15:04:05Z",
+		"Mon, 2 Jan 2006 15:04:05 -0700",
+		"Mon, 2 Jan 2006 15:04:05 MST",
+	}
+	s = strings.TrimSpace(s)
+	for _, format := range formats {
+		if t, err := time.Parse(format, s); err == nil {
+			return t.UTC(), nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unrecognised date format: %q", s)
 }
 
 func startScraper(db *database.Queries, concurrency int, timeBetweenRequest time.Duration) {
