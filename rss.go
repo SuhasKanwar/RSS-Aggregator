@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+// httpClient is shared across all scrape calls to reuse connection pooling.
+var httpClient = &http.Client{
+	Timeout: 10 * time.Second,
+}
+
 type RSSFeed struct {
 	Channel struct {
 		Title       string    `xml:"title"`
@@ -25,10 +30,6 @@ type RSSItem struct {
 }
 
 func urlToFeed(url string) (RSSFeed, error) {
-	httpClient := http.Client{
-		Timeout: 10 * time.Second,
-	}
-
 	res, err := httpClient.Get(url)
 	if err != nil {
 		return RSSFeed{}, err

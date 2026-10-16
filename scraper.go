@@ -80,24 +80,30 @@ func parsePubDate(s string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("unrecognised date format: %q", s)
 }
 
-func startScraper(db *database.Queries, concurrency int, timeBetweenRequest time.Duration) {
+func startScraper(db *database.Queries, concurrency int, timeBetweenRequest time.Duration, stop <-chan struct{}) {
 	log.Printf("Scraping on %v goroutines every %s duration", concurrency, timeBetweenRequest)
 	ticker := time.NewTicker(timeBetweenRequest)
-	for ; ; <-ticker.C {
-		feeds, err := db.GetNextFeedsToFetch(
-			context.Background(),
-			int32(concurrency),
-		)
-		if err != nil {
-			log.Println("error fetching feeds:", err)
-			continue
+	defer ticker.Stop()
+	for {
+		select {
+		case <-stop:
+			log.Println("Scraper stopped gracefully")
+			return
+		case <-ticker.C:
+			feeds, err := db.GetNextFeedsToFetch(
+				context.Background(),
+				int32(concurrency),
+			)
+			if err != nil {
+				log.Println("error fetching feeds:", err)
+				continue
+			}
+			wg := &sync.WaitGroup{}
+			for _, feed := range feeds {
+				wg.Add(1)
+				go scrape(db, wg, feed)
+			}
+			wg.Wait()
 		}
-		wg := &sync.WaitGroup{}
-		for _, feed := range feeds {
-			wg.Add(1)
-
-			go scrape(db, wg, feed)
-		}
-		wg.Wait()
 	}
 }
